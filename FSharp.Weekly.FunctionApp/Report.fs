@@ -1,7 +1,6 @@
 module FSharp.Weekly.Report
 
 open System
-open System.Threading.Tasks
 open System.Globalization
 open Microsoft.Extensions.Logging
 open FSharp.Control.Tasks
@@ -10,7 +9,7 @@ open Tweetinvi
 open FSharp.Weekly.Twitter
 
 let getReportFileName () =
-    let now = DateTime.Now
+    let now = DateTime.UtcNow
     let calendar = CultureInfo.InvariantCulture.Calendar
     let day  = calendar.GetDayOfWeek(now) |> int
     let dayDelta = 4 - (if day = 0 then 7 else day)
