@@ -17,7 +17,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Compile Include="WeeklyTests.fs" />
+        <Compile Include="Weekly.fs" />
+        <Compile Include="FsAdvent.fs" />
     </ItemGroup>
 
     <ItemGroup>

@@ -1,4 +1,4 @@
-module FSharp.Weekly.Tests
+module FSharp.Weekly.Tests.Weekly
 
 open System.Threading.Tasks
 open NUnit.Framework
