@@ -1,0 +1,7 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "<real connection string should be here if we want to run on MacOS>",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet"
+  }
+}
