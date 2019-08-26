@@ -51,15 +51,3 @@ let oEmbed =
         let json = JsonConvert.DeserializeObject<JObject>(str)
         return json.GetValue("html").ToObject<string>()
     }
-
-type TweetType =
-    | AllTweets
-    | OnlyWithLinks
-    | BeCareful
-
-type NewsTweet = {
-    Tweet: ITweet
-    Query: string
-    TweetType : TweetType
-    Origin : string
-}

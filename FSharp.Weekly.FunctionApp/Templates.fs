@@ -4,9 +4,27 @@ open System.Threading.Tasks
 open FSharp.Control.Tasks
 open Giraffe.GiraffeViewEngine
 open Tweetinvi.Models
-open FSharp.Weekly.Twitter
 
-let formatTweet ind (newsTweet:Twitter.NewsTweet) (formatter:ITweet->Task<string>) = task {
+type TweetType =
+    | AllTweets
+    | OnlyWithLinks
+    | BeCareful
+
+type NewsTweet = {
+    Tweet: ITweet
+    Query: string
+    TweetType : TweetType
+    Origin : string
+    IsDuplicate : bool
+}
+
+type ReportModel = {
+    NewsTweets : NewsTweet list
+    Logs: string list
+    Links: (string*string) list
+}
+
+let formatTweet ind (newsTweet:NewsTweet) (formatter:ITweet->Task<string>) = task {
     let removeHref = sprintf "javascript:remove('%s')" newsTweet.Tweet.IdStr
     let! formattedTweet = formatter newsTweet.Tweet
     return tr [_id newsTweet.Tweet.IdStr] [
@@ -24,7 +42,11 @@ let formatTweet ind (newsTweet:Twitter.NewsTweet) (formatter:ITweet->Task<string
                 str "Remove"
             ]
             div [_class "field is-grouped is-grouped-multiline"] [
-                div [_class "control"][
+                if newsTweet.IsDuplicate then
+                    yield div [_class "control"][
+                        span [_class "tag is-warning"] [str "Duplicate"]
+                    ]
+                yield div [_class "control"][
                     div [_class "tags has-addons"] [
                         yield span [_class "tag is-dark"] [str "query"]
                         let classStr =
@@ -65,10 +87,10 @@ let formatTweet ind (newsTweet:Twitter.NewsTweet) (formatter:ITweet->Task<string
     ]
 }
 
-let report tweets formatter =  task {
-    let cnt = List.length tweets
+let report (model:ReportModel) formatter =  task {
+    let cnt = List.length <| model.NewsTweets
     let! rows =
-        tweets
+        model.NewsTweets
         |> List.mapi (fun i t -> formatTweet (cnt-i) t formatter)
         |> Task.WhenAll
 
@@ -85,10 +107,41 @@ let report tweets formatter =  task {
         ]
         body [] [
             section [_class "section"] [
-                div [_class "container"] [
-                    div [_class ""] [
-                        table [_class "table is-striped is-hoverable is-fullwidth"]
-                            (rows |> List.ofArray)
+                table [_class "table is-striped is-hoverable is-fullwidth"]
+                    (rows |> List.ofArray)
+                div [_class "card"] [
+                    header [_class "card-header"] [
+                        p [_class "card-header-title"] [
+                            str "Logs"
+                        ]
+                    ]
+                    div [_class "card-content"][
+                        div [_class "content"] [
+                            ul [] [
+                                for line in model.Logs ->
+                                    li [] [ str line ]
+                            ]
+                        ]
+                    ]
+                ]
+                div [_class "card"] [
+                    header [_class "card-header"] [
+                        p [_class "card-header-title"] [
+                            str "Links"
+                        ]
+                    ]
+                    div [_class "card-content"][
+                        div [_class "content"] [
+                            ul [] [
+                                for (link, tweetLink) in model.Links ->
+                                    li [] [
+                                        str "["
+                                        a [_href tweetLink; _target "_blank"] [ str "tweet" ]
+                                        str "] "
+                                        a [_href link; _target "_blank"] [ str link ]
+                                    ]
+                            ]
+                        ]
                     ]
                 ]
             ]
