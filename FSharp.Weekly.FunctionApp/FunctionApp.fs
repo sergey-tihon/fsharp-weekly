@@ -8,7 +8,13 @@ open Microsoft.Extensions.Logging
 module FunctionApp =
 
     [<FunctionName("FSharpWeekly")>]
-    let run([<TimerTrigger("0 0 1 * * *")>]myTimer: TimerInfo, log: ILogger) = // RunOnStartup=true
+    let fsharpWeekly([<TimerTrigger("0 0 1 * * *")>]myTimer: TimerInfo, log: ILogger) = // RunOnStartup=true
         Storage.configuredBlobStorage()
         |> Report.generateWeekly log
+        :> Task
+
+    [<FunctionName("FSharpTweets")>]
+    let fsharpTweets([<TimerTrigger("0 0 3 * * *")>]myTimer: TimerInfo, log: ILogger) =
+        Storage.configuredTableStorage()
+        |> Report.saveFsharpTweets log
         :> Task

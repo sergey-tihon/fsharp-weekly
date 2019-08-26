@@ -47,6 +47,37 @@ let cloudBlobStorage storageConnectionString  :IStorage =
         })
     }
 
+open System
+open Microsoft.Azure.Cosmos.Table
+
+type TweetRow (tweetId:int64, created:DateTime, userName:string, text:string, json:string) as this =
+    inherit TableEntity()
+    do
+        this.PartitionKey <- created.Year.ToString()
+        this.RowKey <- tweetId.ToString()
+    new() = TweetRow(-1L, DateTime.MinValue, "", "", "{}")
+    member val TweetId = tweetId with get, set
+    member val CreatedDate = created with get, set
+    member val UserScreenName = userName with get, set
+    member val Text = text with get, set
+    member val Json = json with get, set
+
+
+
+let cloudTableStorage storageConnectionString =
+    let client =
+        let storageAccount = CloudStorageAccount.Parse(storageConnectionString)
+        storageAccount.CreateCloudTableClient()
+    fun tableName -> task {
+        let table = client.GetTableReference(tableName)
+        let! _ = table.CreateIfNotExistsAsync()
+        return (fun (tweet:TweetRow) -> task {
+            let insertOperation = TableOperation.InsertOrReplace(tweet)
+            let! _ = table.ExecuteAsync(insertOperation)
+            ()
+        })
+    }
+
 let getEnvValue name =
     let value = System.Environment.GetEnvironmentVariable(name, System.EnvironmentVariableTarget.Process)
     if isNull value
@@ -54,5 +85,9 @@ let getEnvValue name =
     else value
 
 let configuredBlobStorage() =
-     let connectionString = getEnvValue "WEEKLY_STORAGE_CONNECTION_STRING"
-     cloudBlobStorage connectionString
+    let connectionString = getEnvValue "WEEKLY_STORAGE_CONNECTION_STRING"
+    cloudBlobStorage connectionString
+
+let configuredTableStorage() =
+    let connectionString = getEnvValue "WEEKLY_STORAGE_CONNECTION_STRING"
+    cloudTableStorage connectionString

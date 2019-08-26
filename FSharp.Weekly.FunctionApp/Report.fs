@@ -1,9 +1,11 @@
 module FSharp.Weekly.Report
 
 open System
+open System.Threading.Tasks
 open System.Globalization
 open Microsoft.Extensions.Logging
 open FSharp.Control.Tasks
+open FSharp.Weekly.Storage
 open Giraffe
 open Tweetinvi
 open FSharp.Weekly.Twitter
@@ -42,16 +44,6 @@ let generateWeekly (log: ILogger) (storage:Storage.IStorage) = task {
     ]
     log.LogInformation <| sprintf "Loaded %d tweets" (tweets.Length)
 
-    // Execution time optimized for Consumption based App Service Plan
-    let! saveTweet = storage "tweets"
-    let mutable savedTweetsCount = 0
-    for nt in tweets do
-        let json = nt.Tweet.ToJson()
-        let filename = nt.Tweet.IdStr + ".json"
-        let! isSaved = saveTweet filename json false
-        if isSaved then savedTweetsCount <- savedTweetsCount + 1
-    log.LogInformation <| sprintf "Saved %d NEW tweets in JSONs" savedTweetsCount
-
     let startDate = DateTime.Now - TimeSpan.FromDays(7.0)
     let tweets =
         tweets
@@ -77,3 +69,20 @@ let generateWeekly (log: ILogger) (storage:Storage.IStorage) = task {
     else log.LogError <| sprintf "F# weekly NOT saved to %s" reportName
 }
 
+let saveFsharpTweets (log: ILogger) (storage:string->Task<TweetRow -> Task<unit>>) = task {
+    Twitter.auth()
+
+    let tweets = searchTweets "#fsharp" |> List.concat
+    log.LogInformation <| sprintf "Loaded %d tweets" (tweets.Length)
+
+    // Execution time optimized for Consumption based App Service Plan
+    let! saveTweet = storage "fsharptweets"
+    let mutable savedTweetsCount = 0
+    for t in tweets do
+        let tweetRow = Storage.TweetRow(t.Id, t.CreatedAt.ToUniversalTime(), t.CreatedBy.ScreenName, t.FullText, t.ToJson())
+        do! saveTweet tweetRow
+        savedTweetsCount <- savedTweetsCount + 1
+        // TODO
+        //if isSaved then savedTweetsCount <- savedTweetsCount + 1
+    log.LogInformation <| sprintf "Saved %d NEW #fsharp tweets in JSONs" savedTweetsCount
+}
