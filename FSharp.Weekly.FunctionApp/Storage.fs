@@ -72,9 +72,15 @@ let cloudTableStorage storageConnectionString =
         let table = client.GetTableReference(tableName)
         let! _ = table.CreateIfNotExistsAsync()
         return (fun (tweet:TweetRow) -> task {
-            let insertOperation = TableOperation.InsertOrReplace(tweet)
-            let! _ = table.ExecuteAsync(insertOperation)
-            ()
+            let retrieveOperation = TableOperation.Retrieve<TweetRow>(tweet.PartitionKey, tweet.RowKey)
+            let! result = table.ExecuteAsync(retrieveOperation)
+            if isNull result.Result
+            then
+                let insertOperation = TableOperation.Insert(tweet)
+                let! _ = table.ExecuteAsync(insertOperation)
+                return true
+            else
+                return false
         })
     }
 

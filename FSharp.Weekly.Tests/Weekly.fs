@@ -33,7 +33,7 @@ let ``Run Report with CloudBlobStore`` () =
 let loadTweets () =
     Twitter.auth()
     let tweets =
-        Twitter.searchTweets "(from:sergey_tihon OR from:dsyme OR from:c4fsharp OR from:dotnet)"
+        Twitter.searchTweets "#fsharp OR #FsAdvent OR #fsharpx OR #FsAdventJP"
         |> List.concat
     printfn "Fount %d tweets" (tweets.Length)
     Assert.GreaterOrEqual(tweets.Length, 0)

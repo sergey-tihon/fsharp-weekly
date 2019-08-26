@@ -1,7 +1,6 @@
 module FSharp.Weekly.Tests.TweetsFromMongo
 
 open System
-open System
 open MongoDB.Bson
 open MongoDB.Driver
 open System.Threading.Tasks
@@ -18,13 +17,12 @@ let ``from Mongo to Azure Table`` () =
     let collection = database.GetCollection<BsonDocument>("fsharp")
 
     let items = collection.Find(Builders.Filter.Empty).ToEnumerable()
-                //|> Seq.take 100
 
     task {
         let storage = Storage.configuredTableStorage()
         let! saveTweet = storage "fsharptweets"
 
-        let! _ =
+        let! saveResults =
             items
             |> Seq.map (fun x -> task {
                 let (_,tweetId) = x.TryGetValue("TweetId")
@@ -39,8 +37,10 @@ let ``from Mongo to Azure Table`` () =
                 let json = x.ToJson()
 
                 let tweet = TweetRow(tweetId, created, author, text, json)
-                do! saveTweet tweet
+                return! saveTweet tweet
               })
             |> Task.WhenAll
-        ()
+
+        let savedItems = saveResults |> Seq.filter id |> Seq.length
+        printfn "Saved %d new tweets in Table Storage" savedItems
     } :> Task

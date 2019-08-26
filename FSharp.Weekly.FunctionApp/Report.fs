@@ -69,7 +69,7 @@ let generateWeekly (log: ILogger) (storage:Storage.IStorage) = task {
     else log.LogError <| sprintf "F# weekly NOT saved to %s" reportName
 }
 
-let saveFsharpTweets (log: ILogger) (storage:string->Task<TweetRow -> Task<unit>>) = task {
+let saveFsharpTweets (log: ILogger) (storage:string->Task<TweetRow -> Task<bool>>) = task {
     Twitter.auth()
 
     let tweets = searchTweets "#fsharp" |> List.concat
@@ -80,9 +80,7 @@ let saveFsharpTweets (log: ILogger) (storage:string->Task<TweetRow -> Task<unit>
     let mutable savedTweetsCount = 0
     for t in tweets do
         let tweetRow = Storage.TweetRow(t.Id, t.CreatedAt.ToUniversalTime(), t.CreatedBy.ScreenName, t.FullText, t.ToJson())
-        do! saveTweet tweetRow
-        savedTweetsCount <- savedTweetsCount + 1
-        // TODO
-        //if isSaved then savedTweetsCount <- savedTweetsCount + 1
+        let! isSaved = saveTweet tweetRow
+        if isSaved then savedTweetsCount <- savedTweetsCount + 1
     log.LogInformation <| sprintf "Saved %d NEW #fsharp tweets in JSONs" savedTweetsCount
 }
