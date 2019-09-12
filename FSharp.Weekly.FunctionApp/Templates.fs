@@ -104,6 +104,9 @@ let report (model:ReportModel) formatter =  task {
             script [] [
                 str "function remove(id){return (elem=document.getElementById(id)).parentNode.removeChild(elem);}"
             ]
+            style [] [
+                str "a:visited {color: burlywood;}"
+            ]
         ]
         body [] [
             section [_class "section"] [
