@@ -1,16 +1,16 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
-    <AzureFunctionsVersion>v2</AzureFunctionsVersion>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <AzureFunctionsVersion>v3</AzureFunctionsVersion>
     <RootNamespace>FSharp.Weekly</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Giraffe" Version="3.4.0" />
-    <PackageReference Include="Microsoft.Azure.Cosmos.Table" Version="1.0.4" />
-    <PackageReference Include="Microsoft.Azure.Storage.Blob" Version="11.0.0" />
-    <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="1.0.29" />
+    <PackageReference Include="Giraffe" Version="3.6.0" />
+    <PackageReference Include="Microsoft.Azure.Cosmos.Table" Version="1.0.6" />
+    <PackageReference Include="Microsoft.Azure.Storage.Blob" Version="11.1.1" />
+    <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="3.0.2" />
     <PackageReference Include="TaskBuilder.fs" Version="2.1.0" />
-    <PackageReference Include="TweetinviAPI" Version="4.0.1" />
+    <PackageReference Include="TweetinviAPI" Version="4.0.3" />
   </ItemGroup>
 
   <ItemGroup>

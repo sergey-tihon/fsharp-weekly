@@ -37,13 +37,13 @@ let template (adventStart:DateTime) (adventEnd:DateTime) (lastPost:DateTime) =
     ]
 
 [<Test>]
-let ``FsAdvent 2018 table`` () =
-    let adventStart = DateTime(2018, 12, 2)
-    let adventEnd   = DateTime(2018, 12, 24)
-    let lastPost    = DateTime(2019, 1, 1)+TimeSpan.FromHours(23.999)
+let ``FsAdvent 2019 table`` () =
+    let adventStart = DateTime(2019, 12, 1)
+    let adventEnd   = DateTime(2019, 12, 24)
+    let lastPost    = DateTime(2020, 1, 1)+TimeSpan.FromHours(23.999)
     let htmlTable =
         template adventStart adventEnd lastPost
         |> renderHtmlNode
-    let content =htmlTable.Replace("</tr><","</tr>\n<")
+    let content =htmlTable.Replace("</tr><","</tr>\n<").Replace("</td><","</td>\n<")
     let path = Path.Combine(Environment.CurrentDirectory, "FsAdvent.html")
     File.WriteAllText(path, content)
