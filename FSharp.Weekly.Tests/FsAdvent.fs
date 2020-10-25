@@ -6,11 +6,11 @@ open Giraffe.GiraffeViewEngine
 open NUnit.Framework
 
 let rowTemplate =
-    let mutable ind = 0
+    let mutable ind = (DateTime.Now.Year % 100) * 100
     fun (date:DateTime) ->
         ind <- ind + 1
         tr [] [
-            td [] [ str <| sprintf "#%02d" ind]
+            td [] [ str <| sprintf "#%04d" ind]
             td [] [ str <| date.ToString("MMM dd (ddd)") ]
             td [] []
             td [] []
@@ -37,10 +37,10 @@ let template (adventStart:DateTime) (adventEnd:DateTime) (lastPost:DateTime) =
     ]
 
 [<Test>]
-let ``FsAdvent 2019 table`` () =
-    let adventStart = DateTime(2019, 12, 1)
-    let adventEnd   = DateTime(2019, 12, 24)
-    let lastPost    = DateTime(2020, 1, 1)+TimeSpan.FromHours(23.999)
+let ``FsAdvent 2020 table`` () =
+    let adventStart = DateTime(2020, 11, 29)
+    let adventEnd   = DateTime(2020, 12, 24)
+    let lastPost    = DateTime(2021, 1, 1)+TimeSpan.FromHours(23.999)
     let htmlTable =
         template adventStart adventEnd lastPost
         |> renderHtmlNode
