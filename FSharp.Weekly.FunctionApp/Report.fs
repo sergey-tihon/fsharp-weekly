@@ -7,10 +7,9 @@ open System.Collections.Generic
 open Microsoft.Extensions.Logging
 open FSharp.Control.Tasks
 open FSharp.Weekly.Storage
-open Giraffe
-open Tweetinvi
 open FSharp.Weekly.Twitter
 open FSharp.Weekly.Templates
+open Tweetinvi.Models
 
 let getReportFileName () =
     let now = DateTime.UtcNow
@@ -21,7 +20,7 @@ let getReportFileName () =
     sprintf "FsharpWeekly%d-week%d__%s.html" now.Year week (now.ToString("MM-dd__HH-mm"))
 
 let generateWeekly (logger: ILogger) (storage:Storage.IStorage) = task {
-    Twitter.auth()
+    let client = Twitter.getClient()
 
     let logs = List<_>()
     let log text =
@@ -29,13 +28,10 @@ let generateWeekly (logger: ILogger) (storage:Storage.IStorage) = task {
         logger.LogInformation text
 
     let loadTweets query ty =
-        let batches = searchTweets query
+        let batches = searchTweets client query
         let tweets = batches |> List.concat
 
-        sprintf "Found %d tweets by query '%s' with batches %A"
-            (tweets.Length) query
-            (batches |> List.map (List.length))
-        |> log
+        log <| $"Found %d{tweets.Length} tweets by query '%s{query}' with batches %A{batches |> List.map (List.length)}"
 
         tweets |> List.map (fun t -> {
             Tweet = flatTweet t
@@ -50,10 +46,10 @@ let generateWeekly (logger: ILogger) (storage:Storage.IStorage) = task {
         yield! loadTweets "#fsharp OR #FsAdvent OR #fsharpx OR #FsAdventJP" OnlyWithLinks
         yield! loadTweets "fsharp -#fsharp -from:FSharp_Ace" BeCareful
     ]
-    log <| sprintf "Loaded %d tweets" (tweets.Length)
+    log <| $"Loaded %d{tweets.Length} tweets"
 
     let links = Dictionary<_,_>(StringComparer.InvariantCultureIgnoreCase)
-    let startDate = DateTime.Now - TimeSpan.FromDays(7.0)
+    let startDate = DateTimeOffset.Now - TimeSpan.FromDays(7.0)
     let tweets =
         tweets
         |> List.filter (fun x -> x.Tweet.CreatedAt > startDate)
@@ -75,7 +71,7 @@ let generateWeekly (logger: ILogger) (storage:Storage.IStorage) = task {
                 else Some ({x with IsDuplicate = true})
           )
 
-    log <| sprintf "%d tweets included in final report" (tweets.Length)
+    log <| $"%d{tweets.Length} tweets included in final report"
     let model = {
         NewsTweets = tweets
         Logs = List.ofSeq logs
@@ -83,7 +79,7 @@ let generateWeekly (logger: ILogger) (storage:Storage.IStorage) = task {
     }
 
     let! htmlReport = Templates.report model (Twitter.oEmbed)
-    let htmlReport = GiraffeViewEngine.renderHtmlDocument htmlReport
+    let htmlReport = Giraffe.ViewEngine.RenderView.AsString.htmlDocument htmlReport
 
     let! saveReport = storage "reports"
     let! _ = saveReport "latest.html" htmlReport true
@@ -91,22 +87,23 @@ let generateWeekly (logger: ILogger) (storage:Storage.IStorage) = task {
     let reportName = getReportFileName()
     let! isSaved = saveReport reportName htmlReport false
     if isSaved
-    then logger.LogInformation <| sprintf "F# Weekly saved to %s" reportName
-    else logger.LogError <| sprintf "F# weekly NOT saved to %s" reportName
+    then logger.LogInformation <| $"F# Weekly saved to %s{reportName}"
+    else logger.LogError <| $"F# weekly NOT saved to %s{reportName}"
 }
 
 let saveFsharpTweets (log: ILogger) (storage:string->Task<TweetRow -> Task<bool>>) = task {
-    Twitter.auth()
+    let client = Twitter.getClient()
 
-    let tweets = searchTweets "#fsharp" |> List.concat
-    log.LogInformation <| sprintf "Loaded %d '#fsharp' tweets" (tweets.Length)
+    let tweets = searchTweets client "#fsharp" |> List.concat
+    log.LogInformation <| $"Loaded %d{tweets.Length} '#fsharp' tweets"
 
     // Execution time optimized for Consumption based App Service Plan
     let! saveTweet = storage "fsharptweets"
     let mutable savedTweetsCount = 0
     for t in tweets do
-        let tweetRow = Storage.TweetRow(t.Id, t.CreatedAt.ToUniversalTime(), t.CreatedBy.ScreenName, t.FullText, t.ToJson())
+        let json = client.Json.Serialize<ITweet>(t)
+        let tweetRow = Storage.TweetRow(t.Id, t.CreatedAt.UtcDateTime.ToUniversalTime(), t.CreatedBy.ScreenName, t.FullText, json)
         let! isSaved = saveTweet tweetRow
         if isSaved then savedTweetsCount <- savedTweetsCount + 1
-    log.LogInformation <| sprintf "Saved %d NEW #fsharp tweets in Table Storage" savedTweetsCount
+    log.LogInformation <| $"Saved %d{savedTweetsCount} NEW #fsharp tweets in Table Storage"
 }

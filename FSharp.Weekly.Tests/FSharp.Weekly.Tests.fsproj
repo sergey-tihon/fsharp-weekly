@@ -7,14 +7,15 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="3.1.1" />
-        <PackageReference Include="MongoDB.Driver" Version="2.10.1" />
-        <PackageReference Include="nunit" Version="3.12.0" />
-        <PackageReference Include="NUnit3TestAdapter" Version="3.16.1" />
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.4.0" />
-        <PackageReference Include="SixLabors.ImageSharp" Version="1.0.0-beta0007" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="5.0.0" />
+        <PackageReference Include="MongoDB.Driver" Version="2.13.1" />
+        <PackageReference Include="nunit" Version="3.13.2" />
+        <PackageReference Include="NUnit3TestAdapter" Version="4.0.0" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.10.0" />
+        <PackageReference Include="SixLabors.ImageSharp" Version="1.0.3" />
         <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="1.0.0-beta0007" />
         <PackageReference Include="TaskBuilder.fs" Version="2.1.0" />
+        <PackageReference Update="FSharp.Core" Version="5.0.2" />
     </ItemGroup>
 
     <ItemGroup>

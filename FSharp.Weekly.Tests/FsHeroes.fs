@@ -1,14 +1,12 @@
 module FSharp.Weekly.Tests.FsHeroes
 
+open System.IO
 open System.Threading.Tasks
 open System.Net.Http
 open FSharp.Control.Tasks
 open NUnit.Framework
-open Tweetinvi
 open SixLabors.ImageSharp
 open SixLabors.ImageSharp.Processing
-open SixLabors.ImageSharp.Processing
-open SixLabors.Primitives
 
 let heroes =
     [
@@ -41,7 +39,7 @@ let heroes =
         ]
         "2015", [
             "@lefthandedgoat"
-            "@7sharp9_exhumed"
+            "@7sharp9_"
             "@ScottWlaschin"
             "@sforkmann"
             "@tomaspetricek"
@@ -50,10 +48,10 @@ let heroes =
 
 [<Test>]
 let ``FsHeroes Images`` () =
-    FSharp.Weekly.Twitter.auth()
+    let client = FSharp.Weekly.Twitter.getClient()
     task {
-        use client = new HttpClient()
-        let! bytes = client.GetByteArrayAsync("https://www.nbc.com/sites/nbcunbc/files/files/images/2018/7/31/Heroes-KeyArt-Logo-Show-Tile-1920x1080.jpg")
+        use httpClient = new HttpClient()
+        let! bytes = httpClient.GetByteArrayAsync("https://www.nbc.com/sites/nbcunbc/files/files/images/2018/7/31/Heroes-KeyArt-Logo-Show-Tile-1920x1080.jpg")
         let baseImg = Image.Load bytes
 
         for (year, users) in heroes do
@@ -61,10 +59,15 @@ let ``FsHeroes Images`` () =
                 users
                 |> Seq.map (fun name ->
                     if name.StartsWith("@") then
-                        let x = User.GetUserFromScreenName(name.TrimStart('@'))
-                        client.GetByteArrayAsync(x.ProfileImageUrl400x400)
+                        task {
+                            let! user = client.Users.GetUserAsync(name.TrimStart('@'))
+                            use! stream = client.Users.GetProfileImageStreamAsync(user)
+                            use ms = new MemoryStream()
+                            stream.CopyTo(ms)
+                            return ms.ToArray()
+                        }
                     else
-                        client.GetByteArrayAsync(name)
+                        httpClient.GetByteArrayAsync(name)
                    )
                 |> Task.WhenAll
             let img = baseImg.Clone(fun ctx ->
@@ -78,6 +81,6 @@ let ``FsHeroes Images`` () =
                     ctx.DrawImage(photo, location, 1.0f) |> ignore
                 )
             )
-            img.Save(sprintf "FsHeroes%s.png" year)
+            img.Save $"FsHeroes%s{year}.png"
      } :> Task
 

@@ -2,7 +2,7 @@ module FSharp.Weekly.Tests.FsAdvent
 
 open System
 open System.IO
-open Giraffe.GiraffeViewEngine
+open Giraffe.ViewEngine
 open NUnit.Framework
 
 let rowTemplate =
@@ -10,7 +10,7 @@ let rowTemplate =
     fun (date:DateTime) ->
         ind <- ind + 1
         tr [] [
-            td [] [ str <| sprintf "#%04d" ind]
+            td [] [ str <| $"#%04d{ind}"]
             td [] [ str <| date.ToString("MMM dd (ddd)") ]
             td [] []
             td [] []
@@ -37,13 +37,13 @@ let template (adventStart:DateTime) (adventEnd:DateTime) (lastPost:DateTime) =
     ]
 
 [<Test>]
-let ``FsAdvent 2020 table`` () =
-    let adventStart = DateTime(2020, 11, 29)
-    let adventEnd   = DateTime(2020, 12, 24)
-    let lastPost    = DateTime(2021, 1, 1)+TimeSpan.FromHours(23.999)
+let ``FsAdvent 2021 table`` () =
+    let adventStart = DateTime(2021, 11, 28)
+    let adventEnd   = DateTime(2021, 12, 24)
+    let lastPost    = DateTime(2022, 1, 1)+TimeSpan.FromHours(23.999)
     let htmlTable =
         template adventStart adventEnd lastPost
-        |> renderHtmlNode
-    let content =htmlTable.Replace("</tr><","</tr>\n<").Replace("</td><","</td>\n<")
+        |> RenderView.AsString.htmlDocument
+    let content = htmlTable.Replace("</tr><","</tr>\n<").Replace("</td><","</td>\n<")
     let path = Path.Combine(Environment.CurrentDirectory, "FsAdvent.html")
     File.WriteAllText(path, content)

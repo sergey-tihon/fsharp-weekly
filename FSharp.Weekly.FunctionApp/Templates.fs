@@ -2,7 +2,7 @@ module FSharp.Weekly.Templates
 
 open System.Threading.Tasks
 open FSharp.Control.Tasks
-open Giraffe.GiraffeViewEngine
+open Giraffe.ViewEngine
 open Tweetinvi.Models
 
 type TweetType =
@@ -25,7 +25,7 @@ type ReportModel = {
 }
 
 let formatTweet ind (newsTweet:NewsTweet) (formatter:ITweet->Task<string>) = task {
-    let removeHref = sprintf "javascript:remove('%s')" newsTweet.Tweet.IdStr
+    let removeHref = $"javascript:remove('%s{newsTweet.Tweet.IdStr}')"
     let! formattedTweet = formatter newsTweet.Tweet
     return tr [_id newsTweet.Tweet.IdStr] [
         td [_style "min-width: 30px"] [

@@ -47,7 +47,6 @@ let cloudBlobStorage storageConnectionString  :IStorage =
         })
     }
 
-open System
 open Microsoft.Azure.Cosmos.Table
 
 type TweetRow (tweetId:int64, created:DateTime, userName:string, text:string, json:string) as this =
@@ -85,9 +84,9 @@ let cloudTableStorage storageConnectionString =
     }
 
 let getEnvValue name =
-    let value = System.Environment.GetEnvironmentVariable(name, System.EnvironmentVariableTarget.Process)
+    let value = Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.Process)
     if isNull value
-    then failwithf "Environment variable %s is not defined" name
+    then failwithf $"Environment variable %s{name} is not defined"
     else value
 
 let configuredBlobStorage() =

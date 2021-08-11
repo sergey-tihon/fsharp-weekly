@@ -1,6 +1,5 @@
 namespace FSharp.Weekly
 
-open System
 open System.Threading.Tasks
 open Microsoft.Azure.WebJobs
 open Microsoft.Extensions.Logging

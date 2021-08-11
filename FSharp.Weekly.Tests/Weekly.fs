@@ -31,9 +31,8 @@ let ``Run Report with CloudBlobStore`` () =
 
 [<Test>]
 let loadTweets () =
-    Twitter.auth()
-    let tweets =
-        Twitter.searchTweets "#fsharp OR #FsAdvent OR #fsharpx OR #FsAdventJP"
-        |> List.concat
-    printfn "Fount %d tweets" (tweets.Length)
+    let client = Twitter.getClient()
+    let batches = Twitter.searchTweets client "#fsharp OR #FsAdvent OR #fsharpx OR #FsAdventJP"
+    let tweets = batches |> List.concat
+    printfn $"Fount %d{tweets.Length} tweets %A{batches |> List.map (List.length)}"
     Assert.GreaterOrEqual(tweets.Length, 0)
