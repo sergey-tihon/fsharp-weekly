@@ -19,13 +19,11 @@ let getLogger () =
 let ``Run Report with LocalStorage`` () =
     Storage.localStorage()
     |> Report.generateWeekly (getLogger())
-    :> Task
 
 [<Test>]
 let ``Run Report with CloudBlobStore`` () =
     Storage.configuredBlobStorage()
     |> Report.generateWeekly (getLogger())
-    :> Task
 
 
 [<Test>]

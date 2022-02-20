@@ -54,7 +54,7 @@ let ``FsHeroes Images`` () =
         let! bytes = httpClient.GetByteArrayAsync("https://www.nbc.com/sites/nbcunbc/files/files/images/2018/7/31/Heroes-KeyArt-Logo-Show-Tile-1920x1080.jpg")
         let baseImg = Image.Load bytes
 
-        for (year, users) in heroes do
+        for year, users in heroes do
             let! images =
                 users
                 |> Seq.map (fun name ->

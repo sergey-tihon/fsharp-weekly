@@ -136,7 +136,7 @@ let report (model:ReportModel) formatter =  task {
                     div [_class "card-content"] [
                         div [_class "content"] [
                             ul [] [
-                                for (link, tweetLink) in model.Links ->
+                                for link, tweetLink in model.Links ->
                                     li [] [
                                         str "["
                                         a [_href tweetLink; _target "_blank"] [ str "tweet" ]
