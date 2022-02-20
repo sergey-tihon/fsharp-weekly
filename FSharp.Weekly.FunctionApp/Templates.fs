@@ -43,10 +43,10 @@ let formatTweet ind (newsTweet:NewsTweet) (formatter:ITweet->Task<string>) = tas
             ]
             div [_class "field is-grouped is-grouped-multiline"] [
                 if newsTweet.IsDuplicate then
-                    yield div [_class "control"][
+                    yield div [_class "control"] [
                         span [_class "tag is-warning"] [str "Duplicate"]
                     ]
-                yield div [_class "control"][
+                yield div [_class "control"] [
                     div [_class "tags has-addons"] [
                         yield span [_class "tag is-dark"] [str "query"]
                         let classStr =
@@ -118,7 +118,7 @@ let report (model:ReportModel) formatter =  task {
                             str "Logs"
                         ]
                     ]
-                    div [_class "card-content"][
+                    div [_class "card-content"] [
                         div [_class "content"] [
                             ul [] [
                                 for line in model.Logs ->
@@ -133,7 +133,7 @@ let report (model:ReportModel) formatter =  task {
                             str "Links"
                         ]
                     ]
-                    div [_class "card-content"][
+                    div [_class "card-content"] [
                         div [_class "content"] [
                             ul [] [
                                 for (link, tweetLink) in model.Links ->

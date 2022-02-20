@@ -3,7 +3,6 @@ module FSharp.Weekly.Tests.Weekly
 open System.Threading.Tasks
 open NUnit.Framework
 open FSharp.Weekly
-open FSharp.Weekly.Storage
 
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
@@ -14,7 +13,7 @@ let getLogger () =
             .AddLogging(fun cfg -> cfg.AddConsole() |> ignore)
             .Configure<_>(fun (cfg:LoggerFilterOptions) -> cfg.MinLevel <- LogLevel.Debug)
             .BuildServiceProvider();
-    serviceProvider.GetService<ILogger<IStorage>>()
+    serviceProvider.GetService<ILogger<Storage.IStorage>>()
 
 [<Test>]
 let ``Run Report with LocalStorage`` () =
