@@ -1,3 +1,4 @@
+[<RequireQualifiedAccess>]
 module FSharp.Weekly.Storage
 
 open System

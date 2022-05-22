@@ -1,6 +1,6 @@
+[<RequireQualifiedAccess>]
 module FSharp.Weekly.Twitter
 
-open System
 open System.Net.Http
 open FSharp.Control.Tasks
 open Newtonsoft.Json

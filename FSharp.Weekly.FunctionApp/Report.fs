@@ -6,8 +6,6 @@ open System.Globalization
 open System.Collections.Generic
 open Microsoft.Extensions.Logging
 open FSharp.Control.Tasks
-open FSharp.Weekly.Storage
-open FSharp.Weekly.Twitter
 open FSharp.Weekly.Templates
 open Tweetinvi.Models
 
@@ -28,13 +26,13 @@ let generateWeekly (logger: ILogger) (storage:Storage.IStorage) = task {
         logger.LogInformation text
 
     let loadTweets query ty =
-        let batches = searchTweets client query
+        let batches = Twitter.searchTweets client query
         let tweets = batches |> List.concat
 
         log <| $"Found %d{tweets.Length} tweets by query '%s{query}' with batches %A{batches |> List.map (List.length)}"
 
         tweets |> List.map (fun t -> {
-            Tweet = flatTweet t
+            Tweet = Twitter.flatTweet t
             Query = query
             TweetType = ty
             Origin = t.CreatedBy.Name
@@ -67,8 +65,8 @@ let generateWeekly (logger: ILogger) (storage:Storage.IStorage) = task {
             | AllTweets -> Some(x)
             | _ ->
                 if x.Tweet.Urls.Count = 0 then None
-                elif isNewLink then Some (x)
-                else Some ({x with IsDuplicate = true})
+                elif isNewLink then Some x
+                else Some {x with IsDuplicate = true}
           )
 
     log <| $"%d{tweets.Length} tweets included in final report"
@@ -91,10 +89,10 @@ let generateWeekly (logger: ILogger) (storage:Storage.IStorage) = task {
     else logger.LogError <| $"F# weekly NOT saved to %s{reportName}"
 }
 
-let saveFsharpTweets (log: ILogger) (storage:string->Task<TweetRow -> Task<bool>>) = task {
+let saveFsharpTweets (log: ILogger) (storage:string->Task<Storage.TweetRow -> Task<bool>>) = task {
     let client = Twitter.getClient()
 
-    let tweets = searchTweets client "#fsharp" |> List.concat
+    let tweets = Twitter.searchTweets client "#fsharp" |> List.concat
     log.LogInformation <| $"Loaded %d{tweets.Length} '#fsharp' tweets"
 
     // Execution time optimized for Consumption based App Service Plan

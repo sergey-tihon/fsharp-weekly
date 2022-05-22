@@ -6,7 +6,6 @@ open MongoDB.Driver
 open System.Threading.Tasks
 open FSharp.Control.Tasks
 open FSharp.Weekly
-open FSharp.Weekly.Storage
 open NUnit.Framework
 
 [<Test>]
@@ -36,11 +35,11 @@ let ``from Mongo to Azure Table`` () =
                 let text = text.AsString
                 let json = x.ToJson()
 
-                let tweet = TweetRow(tweetId, created, author, text, json)
+                let tweet = Storage.TweetRow(tweetId, created, author, text, json)
                 return! saveTweet tweet
               })
             |> Task.WhenAll
 
         let savedItems = saveResults |> Seq.filter id |> Seq.length
-        printfn "Saved %d new tweets in Table Storage" savedItems
+        printfn $"Saved %d{savedItems} new tweets in Table Storage"
     } :> Task
