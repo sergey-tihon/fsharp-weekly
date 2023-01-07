@@ -41,7 +41,7 @@ let generateWeekly (logger: ILogger) (storage:Storage.IStorage) = task {
     let tweets = [
         yield! loadTweets "from:sergey_tihon OR from:dsyme OR from:c4fsharp OR from:dotnet" AllTweets
         yield! loadTweets "#fsharp OR #FsAdvent OR #fsharpx OR #FsAdventJP" OnlyWithLinks
-        yield! loadTweets "fsharp -#fsharp -from:FSharp_Ace -from:d_fsharp_a_c_F" BeCareful
+        yield! loadTweets "fsharp -#fsharp -from:FSharp_Ace -from:d_fsharp_a_c_F -from:Michael91dEbnC" BeCareful
     ]
     log <| $"Loaded %d{tweets.Length} tweets"
 
