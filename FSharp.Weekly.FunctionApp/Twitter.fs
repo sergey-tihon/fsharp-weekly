@@ -2,7 +2,6 @@
 module FSharp.Weekly.Twitter
 
 open System.Net.Http
-open FSharp.Control.Tasks
 open Newtonsoft.Json
 open Newtonsoft.Json.Linq
 open Tweetinvi

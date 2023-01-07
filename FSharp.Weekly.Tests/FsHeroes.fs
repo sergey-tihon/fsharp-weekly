@@ -3,7 +3,6 @@ module FSharp.Weekly.Tests.FsHeroes
 open System.IO
 open System.Threading.Tasks
 open System.Net.Http
-open FSharp.Control.Tasks
 open NUnit.Framework
 open SixLabors.ImageSharp
 open SixLabors.ImageSharp.Processing

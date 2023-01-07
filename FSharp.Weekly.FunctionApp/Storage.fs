@@ -4,7 +4,6 @@ module FSharp.Weekly.Storage
 open System
 open System.IO
 open System.Threading.Tasks
-open FSharp.Control.Tasks
 open Microsoft.Azure.Storage
 open Microsoft.Azure.Storage.Blob
 

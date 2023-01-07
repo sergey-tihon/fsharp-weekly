@@ -4,7 +4,6 @@ open System
 open MongoDB.Bson
 open MongoDB.Driver
 open System.Threading.Tasks
-open FSharp.Control.Tasks
 open FSharp.Weekly
 open NUnit.Framework
 

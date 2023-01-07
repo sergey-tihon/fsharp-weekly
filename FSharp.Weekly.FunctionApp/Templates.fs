@@ -1,7 +1,6 @@
 module FSharp.Weekly.Templates
 
 open System.Threading.Tasks
-open FSharp.Control.Tasks
 open Giraffe.ViewEngine
 open Tweetinvi.Models
 
