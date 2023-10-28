@@ -7,10 +7,16 @@ open NUnit.Framework
 
 let rowTemplate =
     let mutable ind = (DateTime.Now.Year % 100) * 100
-    fun (date:DateTime) ->
+    let primaryStyle = "color: #ff0000;";
+    fun (date:DateTime) isPrimary ->
         ind <- ind + 1
+        let index = str <| $"#%04d{ind}"
         tr [] [
-            td [] [ str <| $"#%04d{ind}"]
+            td [] [
+                if isPrimary
+                then span [_style primaryStyle] [index]
+                else index
+            ]
             td [] [ str <| date.ToString("MMM dd (ddd)") ]
             td [] []
             td [] []
@@ -29,9 +35,9 @@ let template (adventStart:DateTime) (adventEnd:DateTime) (lastPost:DateTime) =
         tbody [] [
             let mutable date = adventStart
             while date <= lastPost do
-                yield rowTemplate date
-                if date <= adventEnd then
-                    yield rowTemplate date
+                yield rowTemplate date (date <= adventEnd)
+                //if date <= adventEnd then
+                //    yield rowTemplate date false
                 date <- date + TimeSpan.FromDays(1.0)
         ]
     ]
@@ -39,7 +45,7 @@ let template (adventStart:DateTime) (adventEnd:DateTime) (lastPost:DateTime) =
 [<Test>]
 let ``FsAdvent 2023 table`` () =
     let adventStart = DateTime(2023, 12, 1)
-    let adventEnd   = DateTime(2023, 12, 24)
+    let adventEnd   = DateTime(2023, 12, 25)
     let lastPost    = DateTime(2024, 1, 1) + TimeSpan.FromHours(23.999)
     let htmlTable =
         template adventStart adventEnd lastPost
