@@ -43,10 +43,10 @@ let template (adventStart:DateTime) (adventEnd:DateTime) (lastPost:DateTime) =
     ]
 
 [<Test>]
-let ``FsAdvent 2023 table`` () =
-    let adventStart = DateTime(2023, 12, 1)
-    let adventEnd   = DateTime(2023, 12, 25)
-    let lastPost    = DateTime(2024, 1, 1) + TimeSpan.FromHours(23.999)
+let ``FsAdvent 2024 table`` () =
+    let adventStart = DateTime(2024, 12, 1)
+    let adventEnd   = DateTime(2024, 12, 24)
+    let lastPost    = DateTime(2025, 1, 1) + TimeSpan.FromHours(23.999)
     let htmlTable =
         template adventStart adventEnd lastPost
         |> RenderView.AsString.htmlDocument
