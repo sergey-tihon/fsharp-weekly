@@ -43,7 +43,7 @@ let template (adventStart:DateTime) (adventEnd:DateTime) (lastPost:DateTime) =
     ]
 
 [<Test>]
-let ``FsAdvent 2024 table`` () =
+let ``FsAdvent 2025 table`` () =
     let adventStart = DateTime(2024, 12, 1)
     let adventEnd   = DateTime(2024, 12, 24)
     let lastPost    = DateTime(2025, 1, 1) + TimeSpan.FromHours(23.999)
