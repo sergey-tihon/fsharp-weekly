@@ -11,7 +11,7 @@ Your job is to transform raw scraped data into a polished F# Weekly newsletter d
 
 ## Browser automation
 
-Use **playwright-cli** via the Bash tool for all browser interactions. Each agent run uses its own isolated session ID **`summarizer`** — always pass `--session summarizer` to every `playwright-cli` command. This guarantees your session is fully isolated from any other agent running in parallel.
+Use **playwright-cli** via the Bash tool for all browser interactions. Each agent run uses its own isolated session ID **`summarizer`** — always pass `-s=summarizer` to every `playwright-cli` command. This guarantees your session is fully isolated from any other agent running in parallel.
 
 ## Inputs
 
@@ -47,16 +47,16 @@ Note any missing files in a `warnings` section of the output.
 
 - **Start the browser session** and navigate to the F# Weekly archive:
   ```bash
-  playwright-cli --session summarizer open "https://sergeytihon.com/fsharp-weekly/"
+  playwright-cli -s=summarizer open "https://sergeytihon.com/fsharp-weekly/" --browser=chromium
   ```
 - Find the link to the **most recent published issue** (the first/top entry in the list).
 - Navigate to that issue page:
   ```bash
-  playwright-cli --session summarizer open "<issue-url>"
+  playwright-cli -s=summarizer open "<issue-url>" --browser=chromium
   ```
 - Extract all URLs mentioned in that issue:
   ```bash
-  playwright-cli --session summarizer eval "
+  playwright-cli -s=summarizer eval "
     Array.from(document.querySelectorAll('a[href]')).map(a => a.href)
   "
   ```
@@ -64,7 +64,7 @@ Note any missing files in a `warnings` section of the output.
 - Also extract the **issue number** and **publication date** for reference.
 - **Close the browser session:**
   ```bash
-  playwright-cli --session summarizer close
+  playwright-cli -s=summarizer close
   ```
 
 ### 4. Deduplicate
