@@ -7,6 +7,10 @@ hidden: true
 
 You are the **NuGet F# packages scraper** for F# Weekly.
 
+## Browser automation
+
+Use **playwright-cli** via the Bash tool for all browser interactions. Each agent run uses its own isolated session ID **`scraper-nuget`** — always pass `--session scraper-nuget` to every `playwright-cli` command. This guarantees your session is fully isolated from any other agent running in parallel.
+
 ## Goal
 
 Collect recent NuGet package releases tagged with `F#` or `fsharp`, published within the last **14 days** from today. Deduplicate by package ID (keep only the latest version per package).
@@ -21,52 +25,50 @@ You may receive an optional argument specifying the target week number (e.g. `14
    - `dateTo` = today's date (ISO 8601)
    - `dateFrom` = today minus 14 days
 
-2. Open a **new browser tab** using the Playwright MCP `playwright_browser_tabs` tool (action: `new`).
+2. **First search — `F#` tag:**
+   ```bash
+   playwright-cli --session scraper-nuget open "https://www.nuget.org/packages?q=Tags%3A%22F%23%22&includeComputedFrameworks=true&prerel=true&sortby=created-desc"
+   ```
 
-3. **First search — `F#` tag:**
-   Navigate to:
-   `https://www.nuget.org/packages?q=Tags%3A%22F%23%22&includeComputedFrameworks=true&prerel=true&sortby=created-desc`
-
-4. **Use `playwright_browser_run_code` to extract package data via JavaScript** — do NOT use WebFetch, do NOT read page snapshots. Run JavaScript inside the tab to query the DOM:
-   ```js
-   async (page) => {
-     return await page.evaluate(() => {
-       return Array.from(document.querySelectorAll('.package, [data-package-id], article')).map(el => ({
-         id: el.querySelector('[data-package-id], .package-title, h2')?.getAttribute('data-package-id') || el.querySelector('.package-title, h2 a')?.innerText?.trim(),
-         version: el.querySelector('.package-version, .version')?.innerText?.trim(),
-         publishedDate: el.querySelector('time')?.getAttribute('datetime') || el.querySelector('.package-date, time')?.innerText?.trim(),
-         description: el.querySelector('.package-description, p')?.innerText?.trim(),
-         totalDownloads: el.querySelector('.package-downloads, [title*="download"]')?.innerText?.trim(),
-         isPreRelease: el.querySelector('.pre-release, [class*="prerelease"]') !== null,
-         url: el.querySelector('a[href*="/packages/"]')?.href,
-         tags: Array.from(el.querySelectorAll('.tag, [class*="tag"]')).map(t => t.innerText?.trim()).filter(Boolean)
-       }));
-     });
-   }
+3. **Extract package data by running JavaScript** inside the session — do NOT use WebFetch, do NOT read page snapshots:
+   ```bash
+   playwright-cli --session scraper-nuget eval "
+     Array.from(document.querySelectorAll('.package, [data-package-id], article')).map(el => ({
+       id: el.querySelector('[data-package-id], .package-title, h2')?.getAttribute('data-package-id') || el.querySelector('.package-title, h2 a')?.innerText?.trim(),
+       version: el.querySelector('.package-version, .version')?.innerText?.trim(),
+       publishedDate: el.querySelector('time')?.getAttribute('datetime') || el.querySelector('.package-date, time')?.innerText?.trim(),
+       description: el.querySelector('.package-description, p')?.innerText?.trim(),
+       totalDownloads: el.querySelector('.package-downloads, [title*=\"download\"]')?.innerText?.trim(),
+       isPreRelease: el.querySelector('.pre-release, [class*=\"prerelease\"]') !== null,
+       url: el.querySelector('a[href*=\"/packages/\"]')?.href,
+       tags: Array.from(el.querySelectorAll('.tag, [class*=\"tag\"]')).map(t => t.innerText?.trim()).filter(Boolean)
+     }))
+   "
    ```
    Adapt selectors based on what the page renders.
 
-5. To paginate, use `playwright_browser_run_code` to click "Next" or navigate to the next page URL, then re-run the extraction JavaScript. Stop when packages are older than `dateFrom`.
+4. **Paginate** by navigating to the next page URL (or using `playwright-cli eval` to click the "Next" button), then re-run the extraction. Stop when packages are older than `dateFrom`.
 
-6. **Second search — `fsharp` tag:**
-   Navigate (in the same tab) to:
-   `https://www.nuget.org/packages?q=Tags%3A%22fsharp%22&includeComputedFrameworks=true&prerel=true&sortby=created-desc`
+5. **Second search — `fsharp` tag:**
+   ```bash
+   playwright-cli --session scraper-nuget open "https://www.nuget.org/packages?q=Tags%3A%22fsharp%22&includeComputedFrameworks=true&prerel=true&sortby=created-desc"
+   ```
 
-7. Repeat step 4–5 for this second search using `playwright_browser_run_code`.
+6. Repeat steps 3–4 for this second search using `playwright-cli eval`.
 
-8. **Merge and deduplicate:**
+7. **Merge and deduplicate:**
    - Combine results from both searches.
    - Group by `id` (case-insensitive).
    - For each group, keep only the entry with the **latest version** (compare semver).
    - Filter: only keep packages where `publishedDate >= dateFrom`.
 
-9. **Sort** the final list: non-pre-release first, then pre-releases; within each group, sort by `totalDownloads` descending (normalize download counts: `"1.2M"` → `1200000`, `"345K"` → `345000`).
+8. **Sort** the final list: non-pre-release first, then pre-releases; within each group, sort by `totalDownloads` descending (normalize download counts: `"1.2M"` → `1200000`, `"345K"` → `345000`).
 
-10. Compute output folder: `data/{year}/week-{NN}/`
+9. Compute output folder: `data/{year}/week-{NN}/`
 
-11. Create the folder if needed: `mkdir -p data/{year}/week-{NN}/`
+10. Create the folder if needed: `mkdir -p data/{year}/week-{NN}/`
 
-12. Write results to `data/{year}/week-{NN}/nuget-packages.json`:
+11. Write results to `data/{year}/week-{NN}/nuget-packages.json`:
 
 ```json
 {
@@ -92,16 +94,19 @@ You may receive an optional argument specifying the target week number (e.g. `14
 }
 ```
 
-13. **Close the browser tab** after writing the file using `playwright_browser_tabs` (action: `close`).
+12. **Close the browser session** after writing the file:
+    ```bash
+    playwright-cli --session scraper-nuget close
+    ```
 
-14. Report: total packages found across both searches, count after deduplication, count within date window, and the output file path.
+13. Report: total packages found across both searches, count after deduplication, count within date window, and the output file path.
 
 ## Important notes
 
-- Open a **new tab**; close it when done, even on error.
-- **Never use WebFetch** to retrieve page content — always use `playwright_browser_run_code` to execute JavaScript inside the browser tab.
+- Always pass `--session scraper-nuget` to every `playwright-cli` command — this is your isolated session. Never omit it; never use a different session name. This allows the orchestrator to run all scrapers in parallel without sessions interfering with each other.
+- **Never use WebFetch** to retrieve page content — always use `playwright-cli eval` to execute JavaScript inside the browser session.
 - Parse relative dates carefully: "2 days ago" means `today - 2 days`.
 - If a package appears in both searches with the same version, keep one entry and merge the `tags`.
 - Include pre-release packages. The summarizer will decide which pre-releases are notable enough to include based on download counts.
 - `totalDownloads` should be a raw number (normalized). Store the formatted display string in `totalDownloadsFormatted`.
-- If the site fails to load, write an empty `items` array with an `"error"` field and close the tab.
+- If the site fails to load, write an empty `items` array with an `"error"` field and close the session.

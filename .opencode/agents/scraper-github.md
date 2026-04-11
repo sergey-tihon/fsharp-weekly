@@ -7,6 +7,10 @@ hidden: true
 
 You are the **GitHub F# repos scraper** for F# Weekly.
 
+## Browser automation
+
+Use **playwright-cli** via the Bash tool for all browser interactions. Each agent run uses its own isolated session ID **`scraper-github`** — always pass `--session scraper-github` to every `playwright-cli` command. This guarantees your session is fully isolated from any other agent running in parallel.
+
 ## Goal
 
 Collect recently updated F# repositories and releases from GitHub's `#fsharp` topic, updated within the last **14 days** from today.
@@ -21,57 +25,56 @@ You may receive an optional argument specifying the target week number (e.g. `14
    - `dateTo` = today's date (ISO 8601)
    - `dateFrom` = today minus 14 days
 
-2. Open a **new browser tab** using the Playwright MCP `playwright_browser_tabs` tool (action: `new`).
-
-3. Navigate to `https://github.com/topics/fsharp?l=f%23&o=desc&s=updated` using `playwright_browser_navigate`.
+2. **Start the browser session** and navigate to the language-filtered topic page:
+   ```bash
+   playwright-cli --session scraper-github open "https://github.com/topics/fsharp?l=f%23&o=desc&s=updated"
+   ```
    (This shows F# language repos in the fsharp topic, sorted by most recently updated.)
 
-4. **Use `playwright_browser_run_code` to extract repo data via JavaScript** — do NOT use WebFetch, do NOT read page snapshots. Run JavaScript inside the tab to query the DOM:
-   ```js
-   async (page) => {
-     return await page.evaluate(() => {
-       return Array.from(document.querySelectorAll('[data-topic-card], article, .topic-card')).map(el => ({
-         name: el.querySelector('h3 a, [data-hovercard-type="repository"] a')?.innerText?.trim() ||
-               el.querySelector('a[href*="/"]')?.getAttribute('href')?.replace(/^\//, ''),
-         url: 'https://github.com' + (el.querySelector('h3 a, [data-hovercard-type="repository"] a')?.getAttribute('href') || ''),
-         description: el.querySelector('p[class*="description"], p, .topic-card-description')?.innerText?.trim(),
-         stars: el.querySelector('[aria-label*="star"], .stargazers-count, a[href*="stargazers"]')?.innerText?.trim(),
-         forks: el.querySelector('[aria-label*="fork"], .forks-count, a[href*="forks"]')?.innerText?.trim(),
-         language: el.querySelector('[itemprop="programmingLanguage"], .repo-language-color + span')?.innerText?.trim(),
-         lastUpdated: el.querySelector('relative-time, time')?.getAttribute('datetime') || el.querySelector('relative-time, time')?.innerText?.trim(),
-         topics: Array.from(el.querySelectorAll('.topic-tag, a[href*="/topics/"]')).map(t => t.innerText?.trim()).filter(Boolean),
-         latestRelease: (() => {
-           const rel = el.querySelector('a[href*="/releases/tag/"]');
-           return rel ? { tag: rel.innerText?.trim(), releaseUrl: rel.href, publishedDate: null } : null;
-         })()
-       }));
-     });
-   }
+3. **Extract repo data by running JavaScript** inside the session — do NOT use WebFetch, do NOT read page snapshots:
+   ```bash
+   playwright-cli --session scraper-github eval "
+     Array.from(document.querySelectorAll('[data-topic-card], article, .topic-card')).map(el => ({
+       name: el.querySelector('h3 a, [data-hovercard-type=\"repository\"] a')?.innerText?.trim() ||
+             el.querySelector('a[href*=\"/\"]')?.getAttribute('href')?.replace(/^\//, ''),
+       url: 'https://github.com' + (el.querySelector('h3 a, [data-hovercard-type=\"repository\"] a')?.getAttribute('href') || ''),
+       description: el.querySelector('p[class*=\"description\"], p, .topic-card-description')?.innerText?.trim(),
+       stars: el.querySelector('[aria-label*=\"star\"], .stargazers-count, a[href*=\"stargazers\"]')?.innerText?.trim(),
+       forks: el.querySelector('[aria-label*=\"fork\"], .forks-count, a[href*=\"forks\"]')?.innerText?.trim(),
+       language: el.querySelector('[itemprop=\"programmingLanguage\"], .repo-language-color + span')?.innerText?.trim(),
+       lastUpdated: el.querySelector('relative-time, time')?.getAttribute('datetime') || el.querySelector('relative-time, time')?.innerText?.trim(),
+       topics: Array.from(el.querySelectorAll('.topic-tag, a[href*=\"/topics/\"]')).map(t => t.innerText?.trim()).filter(Boolean),
+       latestRelease: (() => {
+         const rel = el.querySelector('a[href*=\"/releases/tag/\"]');
+         return rel ? { tag: rel.innerText?.trim(), releaseUrl: rel.href, publishedDate: null } : null;
+       })()
+     }))
+   "
    ```
    Adapt selectors based on what the page renders.
 
-5. To scroll and load more repos, use `playwright_browser_run_code`:
-   ```js
-   async (page) => {
-     await page.evaluate(() => window.scrollBy(0, window.innerHeight * 3));
-     await page.waitForTimeout(1500);
-   }
+4. **Scroll to load more repos:**
+   ```bash
+   playwright-cli --session scraper-github eval "window.scrollBy(0, window.innerHeight * 3)"
+   playwright-cli --session scraper-github sleep 1500
    ```
    Stop when `lastUpdated` falls outside `dateFrom`.
 
-6. **Also navigate to the non-language-filtered page** to catch popular F# repos written in other languages:
-   Navigate to `https://github.com/topics/fsharp?o=desc&s=updated`
-   Use `playwright_browser_run_code` to collect additional repos not already in your list, using the same date filter.
+5. **Also navigate to the non-language-filtered page** to catch popular F# repos written in other languages:
+   ```bash
+   playwright-cli --session scraper-github open "https://github.com/topics/fsharp?o=desc&s=updated"
+   ```
+   Use `playwright-cli eval` to collect additional repos not already in your list, using the same date filter and the same JavaScript from step 3.
 
-7. Deduplicate by repo URL.
+6. Deduplicate by repo URL.
 
-8. Sort by `lastUpdated` descending.
+7. Sort by `lastUpdated` descending.
 
-9. Compute output folder: `data/{year}/week-{NN}/`
+8. Compute output folder: `data/{year}/week-{NN}/`
 
-10. Create the folder if needed: `mkdir -p data/{year}/week-{NN}/`
+9. Create the folder if needed: `mkdir -p data/{year}/week-{NN}/`
 
-11. Write results to `data/{year}/week-{NN}/github-repos.json`:
+10. Write results to `data/{year}/week-{NN}/github-repos.json`:
 
 ```json
 {
@@ -101,14 +104,17 @@ You may receive an optional argument specifying the target week number (e.g. `14
 }
 ```
 
-12. **Close the browser tab** after writing the file using `playwright_browser_tabs` (action: `close`).
+11. **Close the browser session** after writing the file:
+    ```bash
+    playwright-cli --session scraper-github close
+    ```
 
-13. Report: total repos found, date range, and the output file path.
+12. Report: total repos found, date range, and the output file path.
 
 ## Important notes
 
-- Open a **new tab**; close it when done, even on error.
-- **Never use WebFetch** to retrieve page content — always use `playwright_browser_run_code` to execute JavaScript inside the browser tab.
+- Always pass `--session scraper-github` to every `playwright-cli` command — this is your isolated session. Never omit it; never use a different session name. This allows the orchestrator to run all scrapers in parallel without sessions interfering with each other.
+- **Never use WebFetch** to retrieve page content — always use `playwright-cli eval` to execute JavaScript inside the browser session.
 - Do NOT navigate into individual repository pages — only capture what is shown on the topic listing.
 - Relative dates like "updated 2 days ago" must be converted to absolute ISO dates.
-- If the page fails to load, write an empty `items` array with an `"error"` field and close the tab.
+- If the page fails to load, write an empty `items` array with an `"error"` field and close the session.

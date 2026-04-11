@@ -7,6 +7,10 @@ hidden: true
 
 You are the **Microsoft DevBlogs scraper** for F# Weekly.
 
+## Browser automation
+
+Use **playwright-cli** via the Bash tool for all browser interactions. Each agent run uses its own isolated session ID **`scraper-microsoft`** — always pass `--session scraper-microsoft` to every `playwright-cli` command. This guarantees your session is fully isolated from any other agent running in parallel.
+
 ## Goal
 
 Collect recent posts from https://devblogs.microsoft.com/dotnet/ that are relevant to F# and the .NET ecosystem, published within the last **14 days** from today.
@@ -35,46 +39,42 @@ Exclude posts that are clearly unrelated to .NET (e.g. Azure networking, SQL Ser
    - `dateTo` = today's date (ISO 8601, e.g. `2026-04-05`)
    - `dateFrom` = today minus 14 days
 
-2. Open a **new browser tab** using the Playwright MCP `playwright_browser_tabs` tool (action: `new`).
+2. **Start the browser session** and navigate to the Microsoft DevBlogs page:
+   ```bash
+   playwright-cli --session scraper-microsoft open "https://devblogs.microsoft.com/dotnet/"
+   ```
 
-3. Navigate to `https://devblogs.microsoft.com/dotnet/` using `playwright_browser_navigate`.
-
-4. **Use `playwright_browser_run_code` to extract post data via JavaScript** — do NOT use WebFetch, do NOT read page snapshots. Run a JavaScript function in the tab that queries the DOM and returns structured data. Example pattern:
-   ```js
-   async (page) => {
-     return await page.evaluate(() => {
-       return Array.from(document.querySelectorAll('article, .post-card, .entry')).map(el => ({
-         title: el.querySelector('h2, h3, .entry-title')?.innerText?.trim(),
-         url: el.querySelector('a[href]')?.href,
-         publishedDate: el.querySelector('time, .date')?.getAttribute('datetime') || el.querySelector('time, .date')?.innerText?.trim(),
-         author: el.querySelector('.author, .byline')?.innerText?.trim(),
-         snippet: el.querySelector('.excerpt, .entry-summary, p')?.innerText?.trim(),
-         tags: Array.from(el.querySelectorAll('.tag, .category, .label')).map(t => t.innerText?.trim())
-       }));
-     });
-   }
+3. **Extract post data by running JavaScript** inside the session — do NOT use WebFetch, do NOT read page snapshots:
+   ```bash
+   playwright-cli --session scraper-microsoft eval "
+     Array.from(document.querySelectorAll('article, .post-card, .entry')).map(el => ({
+       title: el.querySelector('h2, h3, .entry-title')?.innerText?.trim(),
+       url: el.querySelector('a[href]')?.href,
+       publishedDate: el.querySelector('time, .date')?.getAttribute('datetime') || el.querySelector('time, .date')?.innerText?.trim(),
+       author: el.querySelector('.author, .byline')?.innerText?.trim(),
+       snippet: el.querySelector('.excerpt, .entry-summary, p')?.innerText?.trim(),
+       tags: Array.from(el.querySelectorAll('.tag, .category, .label')).map(t => t.innerText?.trim())
+     }))
+   "
    ```
    Adapt selectors as needed based on what the page actually renders.
 
-5. To paginate or scroll, use `playwright_browser_run_code` to scroll the page and extract newly loaded items:
-   ```js
-   async (page) => {
-     await page.evaluate(() => window.scrollBy(0, window.innerHeight * 3));
-     await page.waitForTimeout(1500);
-     // then re-run extraction
-   }
+4. **Paginate or scroll** to load more posts:
+   ```bash
+   playwright-cli --session scraper-microsoft eval "window.scrollBy(0, window.innerHeight * 3)"
+   playwright-cli --session scraper-microsoft sleep 1500
    ```
-   Stop collecting when you encounter posts older than `dateFrom`.
+   Re-run the extraction after each scroll. Stop collecting when you encounter posts older than `dateFrom`.
 
-6. Apply the relevance filter to all collected posts.
+5. Apply the relevance filter to all collected posts.
 
-7. Compute the output folder path:
+6. Compute the output folder path:
    - Parse the week argument if provided, else compute: `year = current year`, `week = current ISO week number` (zero-padded to 2 digits, e.g. `04`, `14`)
    - Path: `data/{year}/week-{NN}/`
 
-8. Create the folder if it does not exist (use bash: `mkdir -p data/{year}/week-{NN}/`).
+7. Create the folder if it does not exist: `mkdir -p data/{year}/week-{NN}/`
 
-9. Write the results to `data/{year}/week-{NN}/microsoft-posts.json` with this structure:
+8. Write the results to `data/{year}/week-{NN}/microsoft-posts.json` with this structure:
 
 ```json
 {
@@ -97,15 +97,18 @@ Exclude posts that are clearly unrelated to .NET (e.g. Azure networking, SQL Ser
 }
 ```
 
-10. **Close the browser tab** after writing the file using `playwright_browser_tabs` (action: `close`).
+9. **Close the browser session** after writing the file:
+   ```bash
+   playwright-cli --session scraper-microsoft close
+   ```
 
-11. Report: how many posts were found in total, how many passed the relevance filter, and the output file path.
+10. Report: how many posts were found in total, how many passed the relevance filter, and the output file path.
 
 ## Important notes
 
-- Always open a **new tab** for this scrape session; do not reuse existing tabs.
-- **Never use WebFetch** to retrieve page content — always use `playwright_browser_run_code` to execute JavaScript inside the browser tab.
-- Close the tab when done, even if an error occurs.
-- If the page uses infinite scroll, scroll incrementally via `playwright_browser_run_code` and check post dates after each scroll batch.
+- Always pass `--session scraper-microsoft` to every `playwright-cli` command — this is your isolated session. Never omit it; never use a different session name. This allows the orchestrator to run all scrapers in parallel without sessions interfering with each other.
+- **Never use WebFetch** to retrieve page content — always use `playwright-cli eval` to execute JavaScript inside the browser session.
+- Close the session when done, even if an error occurs.
+- If the page uses infinite scroll, scroll incrementally via `playwright-cli eval` and check post dates after each scroll batch.
 - Do not follow individual post links — collect data from the listing page only (title, url, date, snippet are enough).
-- If the site fails to load or returns an error, write an empty `items` array with an `"error"` field explaining what happened, and still close the tab.
+- If the site fails to load or returns an error, write an empty `items` array with an `"error"` field explaining what happened, and still close the session.

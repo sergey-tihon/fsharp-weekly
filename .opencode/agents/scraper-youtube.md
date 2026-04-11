@@ -7,6 +7,10 @@ hidden: true
 
 You are the **YouTube F# videos scraper** for F# Weekly.
 
+## Browser automation
+
+Use **playwright-cli** via the Bash tool for all browser interactions. Each agent run uses its own isolated session ID **`scraper-youtube`** — always pass `--session scraper-youtube` to every `playwright-cli` command. This guarantees your session is fully isolated from any other agent running in parallel.
+
 ## Goal
 
 Collect recent YouTube videos related to F# and .NET, published within the last **14 days** from today. Two sources:
@@ -23,49 +27,66 @@ You may receive an optional argument specifying the target week number (e.g. `14
    - `dateTo` = today's date (ISO 8601)
    - `dateFrom` = today minus 14 days
 
-2. Open a **new browser tab** using the Playwright MCP `playwright_browser_tabs` tool (action: `new`).
-
 ### Source 1: .NET channel streams
 
-3. Navigate to `https://www.youtube.com/@dotnet/streams` using `playwright_browser_navigate`.
-
-4. Wait for the video grid to load using `playwright_browser_wait_for`.
-
-5. **Use `playwright_browser_run_code` to extract video data via JavaScript** — do NOT use WebFetch, do NOT read page snapshots. Run JavaScript inside the tab:
-   ```js
-   async (page) => {
-     return await page.evaluate(() => {
-       return Array.from(document.querySelectorAll('ytd-rich-item-renderer, ytd-video-renderer, ytd-grid-video-renderer')).map(el => ({
-         title: el.querySelector('#video-title, #title')?.innerText?.trim(),
-         url: 'https://www.youtube.com' + (el.querySelector('a#thumbnail, a#video-title, a[href*="watch"]')?.getAttribute('href') || ''),
-         channel: document.querySelector('[itemprop="author"] [itemprop="name"], #channel-name')?.innerText?.trim() || '.NET',
-         publishedDate: el.querySelector('#metadata-line span:last-child, [class*="metadata"] span')?.innerText?.trim(),
-         duration: el.querySelector('ytd-thumbnail-overlay-time-status-renderer, .badge-shape-wiz__text')?.innerText?.trim(),
-         views: el.querySelector('#metadata-line span:first-child, [class*="view-count"]')?.innerText?.trim(),
-         thumbnail: el.querySelector('img')?.src || el.querySelector('img')?.getAttribute('data-thumb'),
-         source: 'dotnet-streams'
-       }));
-     });
-   }
+2. **Start the browser session** and navigate to the .NET streams page:
+   ```bash
+   playwright-cli --session scraper-youtube open "https://www.youtube.com/@dotnet/streams"
    ```
 
-6. Scroll to load more videos using `playwright_browser_run_code`:
-   ```js
-   async (page) => {
-     await page.evaluate(() => window.scrollBy(0, window.innerHeight * 3));
-     await page.waitForTimeout(2000);
-   }
+3. **Wait for the video grid to load:**
+   ```bash
+   playwright-cli --session scraper-youtube wait-for-selector 'ytd-rich-item-renderer, ytd-video-renderer, ytd-grid-video-renderer'
+   ```
+
+4. **Extract video data by running JavaScript** inside the session — do NOT use WebFetch, do NOT read page snapshots:
+   ```bash
+   playwright-cli --session scraper-youtube eval "
+     Array.from(document.querySelectorAll('ytd-rich-item-renderer, ytd-video-renderer, ytd-grid-video-renderer')).map(el => ({
+       title: el.querySelector('#video-title, #title')?.innerText?.trim(),
+       url: 'https://www.youtube.com' + (el.querySelector('a#thumbnail, a#video-title, a[href*=\"watch\"]')?.getAttribute('href') || ''),
+       channel: document.querySelector('[itemprop=\"author\"] [itemprop=\"name\"], #channel-name')?.innerText?.trim() || '.NET',
+       publishedDate: el.querySelector('#metadata-line span:last-child, [class*=\"metadata\"] span')?.innerText?.trim(),
+       duration: el.querySelector('ytd-thumbnail-overlay-time-status-renderer, .badge-shape-wiz__text')?.innerText?.trim(),
+       views: el.querySelector('#metadata-line span:first-child, [class*=\"view-count\"]')?.innerText?.trim(),
+       thumbnail: el.querySelector('img')?.src || el.querySelector('img')?.getAttribute('data-thumb'),
+       source: 'dotnet-streams'
+     }))
+   "
+   ```
+
+5. **Scroll to load more videos:**
+   ```bash
+   playwright-cli --session scraper-youtube eval "window.scrollBy(0, window.innerHeight * 3)"
+   playwright-cli --session scraper-youtube sleep 2000
    ```
    Stop collecting when `publishedDate` falls outside `dateFrom`. Do not scroll indefinitely.
 
 ### Source 2: F# video search
 
-7. Navigate to `https://www.youtube.com/results?search_query=F%23&sp=EgIIBA%253D%253D` using `playwright_browser_navigate`.
-   (This filter `EgIIBA==` shows only Videos, not shorts or playlists.)
+6. **Navigate to the F# video search page** (reusing the same session):
+   ```bash
+   playwright-cli --session scraper-youtube open "https://www.youtube.com/results?search_query=F%23&sp=EgIIBA%253D%253D"
+   ```
+   (The filter `EgIIBA==` shows only Videos, not shorts or playlists.)
 
-8. Use `playwright_browser_run_code` to extract video results with the same JavaScript pattern as step 5, setting `source: 'fsharp-search'`.
+7. **Extract video results** using the same JavaScript pattern as step 4 (set `source: 'fsharp-search'`):
+   ```bash
+   playwright-cli --session scraper-youtube eval "
+     Array.from(document.querySelectorAll('ytd-rich-item-renderer, ytd-video-renderer, ytd-grid-video-renderer')).map(el => ({
+       title: el.querySelector('#video-title, #title')?.innerText?.trim(),
+       url: 'https://www.youtube.com' + (el.querySelector('a#thumbnail, a#video-title, a[href*=\"watch\"]')?.getAttribute('href') || ''),
+       channel: el.querySelector('#channel-name, [class*=\"channel\"]')?.innerText?.trim(),
+       publishedDate: el.querySelector('#metadata-line span:last-child, [class*=\"metadata\"] span')?.innerText?.trim(),
+       duration: el.querySelector('ytd-thumbnail-overlay-time-status-renderer, .badge-shape-wiz__text')?.innerText?.trim(),
+       views: el.querySelector('#metadata-line span:first-child, [class*=\"view-count\"]')?.innerText?.trim(),
+       thumbnail: el.querySelector('img')?.src || el.querySelector('img')?.getAttribute('data-thumb'),
+       source: 'fsharp-search'
+     }))
+   "
+   ```
 
-9. Apply **relevance filtering** — only keep videos that are clearly about F# programming, .NET development, or related tooling. Exclude:
+8. Apply **relevance filtering** — only keep videos that are clearly about F# programming, .NET development, or related tooling. Exclude:
    - Music videos or content unrelated to programming
    - Videos whose title only mentions "F#" as a musical note (e.g. "Piano tutorial in F#")
    - Duplicates already collected from Source 1
@@ -76,19 +97,19 @@ You may receive an optional argument specifying the target week number (e.g. `14
    - Tool demos (Ionide, Rider, VS Code with F#)
    - Functional programming in .NET content
 
-10. Stop collecting when `publishedDate` falls outside `dateFrom`.
+9. Stop collecting when `publishedDate` falls outside `dateFrom`.
 
 ### Output
 
-11. Merge results from both sources, deduplicate by video URL.
+10. Merge results from both sources, deduplicate by video URL.
 
-12. Sort by `publishedDate` descending.
+11. Sort by `publishedDate` descending.
 
-13. Compute output folder: `data/{year}/week-{NN}/`
+12. Compute output folder: `data/{year}/week-{NN}/`
 
-14. Create the folder if needed: `mkdir -p data/{year}/week-{NN}/`
+13. Create the folder if needed: `mkdir -p data/{year}/week-{NN}/`
 
-15. Write results to `data/{year}/week-{NN}/youtube-videos.json`:
+14. Write results to `data/{year}/week-{NN}/youtube-videos.json`:
 
 ```json
 {
@@ -113,14 +134,17 @@ You may receive an optional argument specifying the target week number (e.g. `14
 }
 ```
 
-16. **Close the browser tab** after writing the file using `playwright_browser_tabs` (action: `close`).
+15. **Close the browser session** after writing the file:
+    ```bash
+    playwright-cli --session scraper-youtube close
+    ```
 
-17. Report: total videos found from each source, after deduplication, and the output file path.
+16. Report: total videos found from each source, after deduplication, and the output file path.
 
 ## Important notes
 
-- Open a **new tab**; close it when done, even on error.
-- **Never use WebFetch** to retrieve page content — always use `playwright_browser_run_code` to execute JavaScript inside the browser tab.
+- Always pass `--session scraper-youtube` to every `playwright-cli` command — this is your isolated session. Never omit it; never use a different session name. This allows the orchestrator to run all scrapers in parallel without sessions interfering with each other.
+- **Never use WebFetch** to retrieve page content — always use `playwright-cli eval` to execute JavaScript inside the browser session.
 - YouTube shows relative timestamps like "3 days ago" or "Streamed 1 week ago" — convert these to absolute ISO dates.
 - Be strict about filtering music videos: if the title clearly refers to F# (musical note) rather than F# (programming language), exclude it.
 - If YouTube search requires sign-in to show results, capture what is visible without signing in and note the limitation.

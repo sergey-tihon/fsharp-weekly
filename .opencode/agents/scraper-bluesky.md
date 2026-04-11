@@ -7,6 +7,10 @@ hidden: true
 
 You are the **Bluesky #fsharp scraper** for F# Weekly.
 
+## Browser automation
+
+Use **playwright-cli** via the Bash tool for all browser interactions. Each agent run uses its own isolated session ID **`scraper-bluesky`** — always pass `--session scraper-bluesky` to every `playwright-cli` command. This guarantees your session is fully isolated from any other agent running in parallel.
+
 ## Goal
 
 Collect recent posts from the `#fsharp` hashtag on Bluesky, posted within the last **14 days** from today.
@@ -21,57 +25,57 @@ You may receive an optional argument specifying the target week number (e.g. `14
    - `dateTo` = today's date (ISO 8601)
    - `dateFrom` = today minus 14 days
 
-2. Open a **new browser tab** using the Playwright MCP `playwright_browser_tabs` tool (action: `new`).
+2. **Start the browser session** and navigate to the target URL:
+   ```bash
+   playwright-cli --session scraper-bluesky open "https://bsky.app/hashtag/fsharp"
+   ```
 
-3. Navigate to `https://bsky.app/hashtag/fsharp` using `playwright_browser_navigate`.
+3. **Wait for the post feed to load:**
+   ```bash
+   playwright-cli --session scraper-bluesky wait-for-selector '[data-testid^="feedItem"], .css-175oi2r[tabindex]'
+   ```
 
-4. Wait for the post feed to load using `playwright_browser_wait_for`.
-
-5. **Use `playwright_browser_run_code` to extract post data via JavaScript** — do NOT use WebFetch, do NOT read page snapshots. Run JavaScript inside the tab to query the DOM:
-   ```js
-   async (page) => {
-     return await page.evaluate(() => {
-       return Array.from(document.querySelectorAll('[data-testid="feedItem-by-*"], [data-testid^="feedItem"], .css-175oi2r[tabindex]')).map(el => {
-         const postLink = el.querySelector('a[href*="/post/"]');
-         const url = postLink ? 'https://bsky.app' + postLink.getAttribute('href') : null;
-         const links = Array.from(el.querySelectorAll('a[href]'))
-           .map(a => a.href)
-           .filter(h => h && !h.includes('bsky.app/profile') && !h.startsWith('https://bsky.app/hashtag'));
-         return {
-           author: el.querySelector('[data-testid="postAuthor"] span, .r-1awozwy span')?.innerText?.trim(),
-           handle: el.querySelector('[data-testid="postAuthor"] [href*="/profile/"]')?.getAttribute('href')?.replace('/profile/', '') || '',
-           text: el.querySelector('[data-testid="postText"], [class*="postText"]')?.innerText?.trim(),
-           url: url,
-           embedUrl: url,
-           publishedDate: el.querySelector('time')?.getAttribute('datetime') || el.querySelector('time')?.innerText?.trim(),
-           likes: el.querySelector('[data-testid="likeCount"], [aria-label*="like"]')?.innerText?.trim(),
-           reposts: el.querySelector('[data-testid="repostCount"], [aria-label*="repost"]')?.innerText?.trim(),
-           hasLinks: links.length > 0,
-           links: links,
-           hasImages: el.querySelector('img[src*="cdn.bsky.app"]') !== null
-         };
-       });
-     });
-   }
+4. **Extract post data by running JavaScript** inside the session — do NOT use WebFetch, do NOT read page snapshots:
+   ```bash
+   playwright-cli --session scraper-bluesky eval "
+     Array.from(document.querySelectorAll('[data-testid=\"feedItem-by-*\"], [data-testid^=\"feedItem\"], .css-175oi2r[tabindex]')).map(el => {
+       const postLink = el.querySelector('a[href*=\"/post/\"]');
+       const url = postLink ? 'https://bsky.app' + postLink.getAttribute('href') : null;
+       const links = Array.from(el.querySelectorAll('a[href]'))
+         .map(a => a.href)
+         .filter(h => h && !h.includes('bsky.app/profile') && !h.startsWith('https://bsky.app/hashtag'));
+       return {
+         author: el.querySelector('[data-testid=\"postAuthor\"] span, .r-1awozwy span')?.innerText?.trim(),
+         handle: el.querySelector('[data-testid=\"postAuthor\"] [href*=\"/profile/\"]')?.getAttribute('href')?.replace('/profile/', '') || '',
+         text: el.querySelector('[data-testid=\"postText\"], [class*=\"postText\"]')?.innerText?.trim(),
+         url: url,
+         embedUrl: url,
+         publishedDate: el.querySelector('time')?.getAttribute('datetime') || el.querySelector('time')?.innerText?.trim(),
+         likes: el.querySelector('[data-testid=\"likeCount\"], [aria-label*=\"like\"]')?.innerText?.trim(),
+         reposts: el.querySelector('[data-testid=\"repostCount\"], [aria-label*=\"repost\"]')?.innerText?.trim(),
+         hasLinks: links.length > 0,
+         links: links,
+         hasImages: el.querySelector('img[src*=\"cdn.bsky.app\"]') !== null
+       };
+     })
+   "
    ```
    Adapt selectors based on what the page renders.
 
-6. Scroll down to load more posts using `playwright_browser_run_code`:
-   ```js
-   async (page) => {
-     await page.evaluate(() => window.scrollBy(0, window.innerHeight * 3));
-     await page.waitForTimeout(1500);
-   }
+5. **Scroll down to load more posts:**
+   ```bash
+   playwright-cli --session scraper-bluesky eval "window.scrollBy(0, window.innerHeight * 3)"
+   playwright-cli --session scraper-bluesky sleep 1500
    ```
    Stop when posts fall outside `dateFrom`.
 
-7. Deduplicate by post URL.
+6. Deduplicate by post URL.
 
-8. Compute output folder: `data/{year}/week-{NN}/`
+7. Compute output folder: `data/{year}/week-{NN}/`
 
-9. Create the folder if needed: `mkdir -p data/{year}/week-{NN}/`
+8. Create the folder if needed: `mkdir -p data/{year}/week-{NN}/`
 
-10. Write results to `data/{year}/week-{NN}/bluesky.json`:
+9. Write results to `data/{year}/week-{NN}/bluesky.json`:
 
 ```json
 {
@@ -99,15 +103,19 @@ You may receive an optional argument specifying the target week number (e.g. `14
 }
 ```
 
-11. **Close the browser tab** after writing the file using `playwright_browser_tabs` (action: `close`).
+10. **Close the browser session** after writing the file:
+    ```bash
+    playwright-cli --session scraper-bluesky close
+    ```
 
-12. Report: total posts collected and the output file path.
+11. Report: total posts collected and the output file path.
 
 ## Important notes
 
-- Open a **new tab**; close it when done, even on error.
-- **Never use WebFetch** to retrieve page content — always use `playwright_browser_run_code` to execute JavaScript inside the browser tab.
+- Always pass `--session scraper-bluesky` to every `playwright-cli` command — this is your isolated session. Never omit it; never use a different session name. This allows the orchestrator to run all scrapers in parallel without sessions interfering with each other.
+- **Never use WebFetch** to retrieve page content — always use `playwright-cli eval` to execute JavaScript inside the browser session.
+- Close the session when done, even on error.
 - The `embedUrl` field is critical — the newsletter embeds Bluesky posts directly using their canonical URL. Make sure it is in the format `https://bsky.app/profile/{handle}/post/{postId}`.
 - The summarizer will pick the 3 most interesting posts to embed between newsletter sections. Posts with links, images, or notable engagement are preferred.
 - Relative timestamps must be converted to absolute ISO dates.
-- If the feed fails to load or returns an error, write an empty `items` array with an `"error"` field and close the tab.
+- If the feed fails to load or returns an error, write an empty `items` array with an `"error"` field and close the session.
