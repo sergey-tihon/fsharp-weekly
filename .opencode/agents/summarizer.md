@@ -9,9 +9,7 @@ You are the **F# Weekly Newsletter Summarizer**.
 
 Your job is to transform raw scraped data into a polished F# Weekly newsletter draft, ready to paste into WordPress.
 
-## Browser automation
-
-Use **playwright-cli** via the Bash tool for all browser interactions. Each agent run uses its own isolated session ID **`summarizer`** — always pass `-s=summarizer` to every `playwright-cli` command. This guarantees your session is fully isolated from any other agent running in parallel.
+**This agent does NOT use a browser.** All required data — including the URL list of recently published issues used for deduplication — is provided as JSON files in the data folder. The `scraper-published` agent is responsible for producing `published-issues.json` in advance (run in parallel by the orchestrator).
 
 ## Inputs
 
@@ -40,32 +38,17 @@ Read these files from the data folder (any that exist — not all are required):
 - `nuget-packages.json`
 - `github-repos.json`
 - `youtube-videos.json`
+- `published-issues.json` — last 3 published F# Weekly issues with all linked URLs (used for deduplication in step 3)
 
 Note any missing files in a `warnings` section of the output.
 
-### 3. Fetch the last published F# Weekly to build a deduplication URL set
+### 3. Build the deduplication URL set from `published-issues.json`
 
-- **Start the browser session** and navigate to the F# Weekly archive:
-  ```bash
-  playwright-cli -s=summarizer open "https://sergeytihon.com/fsharp-weekly/" --browser=chromium
-  ```
-- Find the link to the **most recent published issue** (the first/top entry in the list).
-- Navigate to that issue page:
-  ```bash
-  playwright-cli -s=summarizer open "<issue-url>" --browser=chromium
-  ```
-- Extract all URLs mentioned in that issue:
-  ```bash
-  playwright-cli -s=summarizer eval "
-    Array.from(document.querySelectorAll('a[href]')).map(a => a.href)
-  "
-  ```
-- Store these as a `previousIssueUrls` set (normalized: lowercase, trim trailing slash).
-- Also extract the **issue number** and **publication date** for reference.
-- **Close the browser session:**
-  ```bash
-  playwright-cli -s=summarizer close
-  ```
+- Read `data/{year}/week-{NN}/published-issues.json`. It contains the 3 most recent published F# Weekly issues, each with their linked URLs, plus a pre-computed `allUrls` array.
+- Use `allUrls` directly as the `previousIssueUrls` set. If `allUrls` is missing for any reason, build it yourself by unioning the `urls` arrays from every entry under `issues`.
+- Normalize entries when comparing: trim whitespace, lowercase the host, strip trailing `/`, drop `#fragment` and obvious tracking query params (`utm_*`).
+- Capture metadata for the report: the URL, title, and `publishedDate` of the **most recent** issue (first entry under `issues`).
+- If `published-issues.json` is missing or empty, log a warning, skip deduplication entirely (treat `previousIssueUrls` as an empty set), and continue — do NOT attempt to fetch the blog yourself; this agent has no browser.
 
 ### 4. Deduplicate
 

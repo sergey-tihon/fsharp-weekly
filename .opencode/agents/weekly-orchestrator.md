@@ -1,6 +1,6 @@
 ---
 name: weekly-orchestrator
-description: Orchestrates the full F# Weekly data collection pipeline. Runs all 7 scrapers in parallel, then runs the summarizer. Accepts an optional week number argument. Called by the /weekly command.
+description: Orchestrates the full F# Weekly data collection pipeline. Runs all 6 scrapers in parallel (5 content scrapers + the published-issues scraper for deduplication), then runs the summarizer. Accepts an optional week number argument. Called by the /weekly command.
 mode: subagent
 hidden: true
 permission:
@@ -38,19 +38,18 @@ Date window: rolling 14 days up to today ({dateTo})
 Output folder: data/{year}/week-{NN}/
 ```
 
-### 2. Run all 7 scrapers in parallel
+### 2. Run all 6 scrapers in parallel
 
 Use the **Task tool** to launch all of the following subagents **simultaneously** in a single message (do not wait for one to finish before starting the next):
 
 1. `scraper-microsoft` — with argument `{week}` (the resolved zero-padded week number)
-2. `scraper-twitter` — with argument `{week}`
-3. `scraper-bluesky` — with argument `{week}`
-4. `scraper-mastodon` — with argument `{week}`
-5. `scraper-nuget` — with argument `{week}`
-6. `scraper-github` — with argument `{week}`
-7. `scraper-youtube` — with argument `{week}`
+2. `scraper-mastodon` — with argument `{week}`
+3. `scraper-nuget` — with argument `{week}`
+4. `scraper-github` — with argument `{week}`
+5. `scraper-youtube` — with argument `{week}`
+6. `scraper-published` — with argument `{week}` (collects URLs from the last 3 published F# Weekly issues for summarizer deduplication)
 
-Wait for all 7 to complete. Do not proceed to step 3 until all scrapers have finished (or reported failure).
+Wait for all 6 to complete. Do not proceed to step 3 until all scrapers have finished (or reported failure).
 
 ### 3. Report scraper results
 
@@ -59,15 +58,14 @@ After all scrapers finish, print a summary:
 ```
 Scraper Results:
   ✓ Microsoft DevBlogs   — {N} posts         → microsoft-posts.json
-  ✓ Twitter #fsharp      — {N} tweets        → twitter.json
-  ✓ Bluesky #fsharp      — {N} posts         → bluesky.json
   ✓ Mastodon #fsharp     — {N} toots         → mastodon.json
   ✓ NuGet packages       — {N} packages      → nuget-packages.json
   ✓ GitHub repos         — {N} repos         → github-repos.json
   ✓ YouTube videos       — {N} videos        → youtube-videos.json
+  ✓ Published issues     — {N} issues, {M} URLs → published-issues.json
 ```
 
-Use ✗ for any scraper that failed, and show the error. Continue to step 4 even if some scrapers failed (the summarizer will work with whatever data is available).
+Use ✗ for any scraper that failed, and show the error. Continue to step 4 even if some scrapers failed (the summarizer will work with whatever data is available; if `scraper-published` failed, deduplication will be skipped).
 
 ### 4. Run the summarizer
 
