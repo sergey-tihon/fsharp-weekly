@@ -3,10 +3,18 @@
   "isRoot": true,
   "tools": {
     "fantomas": {
-      "version": "6.2.2",
+      "version": "7.0.6",
       "commands": [
         "fantomas"
-      ]
+      ],
+      "rollForward": false
+    },
+    "dotnet-outdated-tool": {
+      "version": "4.8.1",
+      "commands": [
+        "dotnet-outdated"
+      ],
+      "rollForward": false
     }
   }
 }

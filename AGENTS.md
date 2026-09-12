@@ -189,5 +189,5 @@ Missing env vars cause `failwithf` at runtime (see `Storage.getEnvValue`). Local
 | `Microsoft.Azure.Cosmos.Table` | 1.0.8 | Azure Table Storage |
 | `nunit` / `NUnit3TestAdapter` | 3.13.3 / 4.3.1 | Test framework |
 | `MongoDB.Driver` | 2.19.0 | Used in migration test only |
-| `SixLabors.ImageSharp` | 3.1.3 | Image composition in FsHeroes test |
+| `SkiaSharp` / `SkiaSharp.NativeAssets.Linux` | 3.119.4 | Image composition in FsHeroes test |
 | `FSharp.Core` | 7.0.0 | Pinned across both projects |

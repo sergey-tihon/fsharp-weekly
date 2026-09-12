@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <AzureFunctionsVersion>v4</AzureFunctionsVersion>
     <RootNamespace>FSharp.Weekly</RootNamespace>
     <LangVersion>preview</LangVersion>
@@ -9,9 +9,9 @@
     <PackageReference Include="Giraffe.ViewEngine" Version="1.4.0" />
     <PackageReference Include="Microsoft.Azure.Cosmos.Table" Version="1.0.8" />
     <PackageReference Include="Microsoft.Azure.Storage.Blob" Version="11.2.3" />
-    <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="4.1.3" />
+    <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="4.6.0" />
     <PackageReference Include="TweetinviAPI" Version="5.0.4" />
-    <PackageReference Update="FSharp.Core" Version="7.0.0" />
+    <PackageReference Update="FSharp.Core" Version="10.1.401" />
   </ItemGroup>
 
   <ItemGroup>

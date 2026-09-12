@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="FSharp.Weekly.FunctionApp/FSharp.Weekly.FunctionApp.fsproj" />
+  <Project Path="FSharp.Weekly.Tests/FSharp.Weekly.Tests.fsproj" />
+</Solution>

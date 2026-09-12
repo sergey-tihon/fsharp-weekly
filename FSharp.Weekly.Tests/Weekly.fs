@@ -11,25 +11,25 @@ let getLogger () =
     let serviceProvider =
         ServiceCollection()
             .AddLogging(fun cfg -> cfg.AddConsole() |> ignore)
-            .Configure<_>(fun (cfg:LoggerFilterOptions) -> cfg.MinLevel <- LogLevel.Debug)
-            .BuildServiceProvider();
+            .Configure<_>(fun (cfg: LoggerFilterOptions) -> cfg.MinLevel <- LogLevel.Debug)
+            .BuildServiceProvider()
     serviceProvider.GetService<ILogger<Storage.IStorage>>()
 
 [<Test>]
 let ``Run Report with LocalStorage`` () =
-    Storage.localStorage()
-    |> Report.generateWeekly (getLogger())
+    Storage.localStorage () |> Report.generateWeekly (getLogger ())
 
 [<Test>]
 let ``Run Report with CloudBlobStore`` () =
-    Storage.configuredBlobStorage()
-    |> Report.generateWeekly (getLogger())
+    Storage.configuredBlobStorage ()
+    |> Report.generateWeekly (getLogger ())
 
 
 [<Test>]
 let loadTweets () =
-    let client = Twitter.getClient()
-    let batches = Twitter.searchTweets client "#fsharp OR #FsAdvent OR #fsharpx OR #FsAdventJP"
+    let client = Twitter.getClient ()
+    let batches =
+        Twitter.searchTweets client "#fsharp OR #FsAdvent OR #fsharpx OR #FsAdventJP"
     let tweets = batches |> List.concat
     printfn $"Fount %d{tweets.Length} tweets %A{batches |> List.map (List.length)}"
-    Assert.GreaterOrEqual(tweets.Length, 0)
+    Assert.That(tweets.Length, Is.GreaterThanOrEqualTo(0))
