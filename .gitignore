@@ -416,3 +416,4 @@ Temporary Items
 .apdisk
 
 /.playwright-cli
+/.playwright-cli/
