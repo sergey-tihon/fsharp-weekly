@@ -274,7 +274,7 @@ def browser_collect(
             source,
             [],
             status="blocked",
-            error=f"Login required. Run: python3 .opencode/skills/weekly-collect/scripts/login.py {source}",
+            error=f"Login required. Run: python3 .agents/skills/weekly-collect/scripts/login.py {source}",
         )
     session = f"weekly-{source}"
     command = ["playwright-cli", f"-s={session}", "open", url, "--browser=chromium", "--persistent", "--profile", str(profile)]
@@ -289,7 +289,7 @@ def browser_collect(
                 source,
                 [],
                 status="blocked",
-                error=f"Login required. Run: python3 .opencode/skills/weekly-collect/scripts/login.py {source}",
+                error=f"Login required. Run: python3 .agents/skills/weekly-collect/scripts/login.py {source}",
             )
         run(["playwright-cli", f"-s={session}", "sleep", "3000"], timeout=10)
         raw_items = browser_eval(session, extraction)
