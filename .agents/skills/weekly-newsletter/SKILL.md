@@ -7,13 +7,21 @@ description: Prepares and renders an F# Weekly newsletter. Use after weekly-coll
 
 Run from the repository root. Omit `--week` when no week argument was supplied.
 
-1. Prepare deduplicated candidates and an initial editorial file:
+1. Collect **all sources before preparing candidates**. Do not run `prepare.py` against a partially collected week:
+
+```bash
+python3 .agents/skills/weekly-collect/scripts/collect.py --week "$ARGUMENTS"
+```
+
+The all-source run must include Microsoft DevBlogs, published issues, NuGet, GitHub, Mastodon, YouTube, Bluesky, and X/Twitter. Check the output and `data/{year}/week-{NN}/manifest.json`; retry any `failed`, `partial`, or newly authenticated social source before continuing. If X/Twitter or Bluesky reports that login is required, ask the user to complete the corresponding login, then rerun that source.
+
+2. Prepare deduplicated candidates and an initial editorial file:
 
 ```bash
 python3 .agents/skills/weekly-newsletter/scripts/prepare.py --week "$ARGUMENTS"
 ```
 
-2. Read `data/{year}/week-{NN}/candidates.json` and `editorial.json`. Edit only `editorial.json`:
+3. Read `data/{year}/week-{NN}/candidates.json` and `editorial.json`. Edit only `editorial.json`:
 
 - Write an accurate `title` without the `F# Weekly #NN` prefix.
 - Write a 1-3 sentence `intro`.
@@ -24,7 +32,7 @@ python3 .agents/skills/weekly-newsletter/scripts/prepare.py --week "$ARGUMENTS"
 
 Detailed editorial guidance is in `references/editorial-rules.md`.
 
-3. Validate and render both formats:
+4. Validate and render both formats:
 
 ```bash
 python3 .agents/skills/weekly-newsletter/scripts/render.py --week "$ARGUMENTS"
